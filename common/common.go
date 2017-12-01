@@ -94,15 +94,61 @@ const (
 	TCPFlagCwr = 0x80
 )
 
+// ErrorCode type for codes of errors
+type ErrorCode int
+
+// constants with error codes
+const (
+	CodeFail ErrorCode = iota + 1
+	CodeParseCPUListFail
+	CodeReqTooManyPorts
+	CodeBadArgument
+	CodeUseNilFlow
+	CodeOpenedFlowAtTheEnd
+	CodePortHasNoQueues
+	CodeNotAllQueuesUsed
+	CodeFailToInitPort
+	CodeParseRuleJSONErr
+	CodeFileError
+	CodeParseRuleError
+	CodeIncorrectArgInRules
+	CodeIncorrectRule
+	CodeAllocMbufError
+	CodePktMbufHeadRoomTooSmall
+	CodeNotEnoughCores
+	CodeNotFound
+)
+
+// NFError is error type returned by yanff functions
+type NFError struct {
+	Code    ErrorCode
+	Message string
+}
+
+// Error method to implement error interface
+func (err NFError) Error() string {
+	return fmt.Sprintf("%s (%d)", err.Message, err.Code)
+}
+
 var currentLogType = No | Initialization | Debug
 
-// LogError internal, used in all packages
-func LogError(logType LogType, v ...interface{}) {
+// LogFatal internal, used in all packages
+func LogFatal(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
 		t := fmt.Sprintln(v...)
 		log.Fatal("ERROR: ", t)
 	}
 	os.Exit(1)
+}
+
+// LogError internal, used in all packages
+func LogError(logType LogType, v ...interface{}) string {
+	if logType&currentLogType != 0 {
+		t := fmt.Sprintln(v...)
+		log.Print("ERROR: ", t)
+		return t
+	}
+	return ""
 }
 
 // LogWarning internal, used in all packages

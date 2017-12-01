@@ -6,6 +6,8 @@ package main
 
 import (
 	"flag"
+	"log"
+
 	"github.com/intel-go/yanff/flow"
 )
 
@@ -14,6 +16,13 @@ var (
 	inport  uint
 	cores   string
 )
+
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
 // Main function for constructing packet processing graph.
 func main() {
@@ -25,12 +34,13 @@ func main() {
 	config := flow.Config{
 		CPUList: cores,
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from 0 port and send to 1 port.
-	flow1 := flow.SetReceiver(uint8(inport))
-	flow.SetSender(flow1, uint8(outport))
+	flow1, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
+	CheckFatal(flow.SetSender(flow1, uint8(outport)))
 
 	// Begin to process packets.
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }

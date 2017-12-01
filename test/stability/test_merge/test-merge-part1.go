@@ -6,6 +6,7 @@ package main
 
 import (
 	"flag"
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -63,6 +64,13 @@ var (
 	fixMACAddrs2 func(*packet.Packet, flow.UserContext)
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
 	flag.Uint64Var(&passedLimit, "passedLimit", passedLimit, "received/sent minimum ratio to pass test")
 	flag.Uint64Var(&speed, "speed", speed, "speed of 1 and 2 generators, Pkts/s")
@@ -78,7 +86,7 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 	stabilityCommon.InitCommonState(*configFile, *target)
 	fixMACAddrs1 = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
 	fixMACAddrs2 = stabilityCommon.ModifyPacket[outport2].(func(*packet.Packet, flow.UserContext))
@@ -86,21 +94,26 @@ func main() {
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
-	firstFlow := flow.SetGenerator(generatePacketGroup1, speed, nil)
-	flow.SetSender(firstFlow, uint8(outport1))
+	firstFlow, err := flow.SetGenerator(generatePacketGroup1, speed, nil)
+	CheckFatal(err)
+	CheckFatal(flow.SetSender(firstFlow, uint8(outport1)))
 
 	// Create second packet flow
-	secondFlow := flow.SetGenerator(generatePacketGroup2, speed, nil)
-	flow.SetSender(secondFlow, uint8(outport2))
+	secondFlow, err := flow.SetGenerator(generatePacketGroup2, speed, nil)
+	CheckFatal(err)
+	CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
 
 	// Create receiving flow and set a checking function for it
-	inputFlow := flow.SetReceiver(uint8(inport))
+	inputFlow, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
 
-	flow.SetHandler(inputFlow, checkPackets, nil)
-	flow.SetStopper(inputFlow)
+	CheckFatal(flow.SetHandler(inputFlow, checkPackets, nil))
+	CheckFatal(flow.SetStopper(inputFlow))
 
 	// Start pipeline
-	go flow.SystemStart()
+	go func() {
+		CheckFatal(flow.SystemStart())
+	}()
 	progStart = time.Now()
 
 	// Wait for enough packets to arrive
@@ -142,10 +155,10 @@ func main() {
 
 func generatePacketGroup1(pkt *packet.Packet, context flow.UserContext) {
 	if pkt == nil {
-		panic("Failed to create new packet")
+		log.Fatal("Failed to create new packet")
 	}
 	if packet.InitEmptyIPv4UDPPacket(pkt, payloadSize) == false {
-		panic("Failed to init empty packet")
+		log.Fatal("Failed to init empty packet")
 	}
 	ipv4 := pkt.GetIPv4()
 	udp := pkt.GetUDPForIPv4()
@@ -165,10 +178,10 @@ func generatePacketGroup1(pkt *packet.Packet, context flow.UserContext) {
 
 func generatePacketGroup2(pkt *packet.Packet, context flow.UserContext) {
 	if pkt == nil {
-		panic("Failed to create new packet")
+		log.Fatal("Failed to create new packet")
 	}
 	if packet.InitEmptyIPv4UDPPacket(pkt, payloadSize) == false {
-		panic("Failed to init empty packet")
+		log.Fatal("Failed to init empty packet")
 	}
 	ipv4 := pkt.GetIPv4()
 	udp := pkt.GetUDPForIPv4()

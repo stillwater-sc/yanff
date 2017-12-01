@@ -8,7 +8,18 @@
 
 package main
 
-import "github.com/intel-go/yanff/flow"
+import (
+	"log"
+
+	"github.com/intel-go/yanff/flow"
+)
+
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
 func main() {
 	config := flow.Config{
@@ -17,15 +28,17 @@ func main() {
 		CPUList: "0-7",
 	}
 
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 	// (port of device, core (not from YANFF set) which will handle device, name of device)
 	kni := flow.CreateKniDevice(1, 20, "myKNI")
 
-	fromEthFlow := flow.SetReceiver(0)
-	flow.SetSender(fromEthFlow, kni)
+	fromEthFlow, err := flow.SetReceiver(uint8(0))
+	CheckFatal(err)
+	CheckFatal(flow.SetSender(fromEthFlow, kni))
 
-	fromKNIFlow := flow.SetReceiver(kni)
-	flow.SetSender(fromKNIFlow, 1)
+	fromKNIFlow, err := flow.SetReceiver(kni)
+	CheckFatal(err)
+	CheckFatal(flow.SetSender(fromKNIFlow, uint8(1)))
 
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }

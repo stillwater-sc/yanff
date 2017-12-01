@@ -1,16 +1,28 @@
 package main
 
-import "github.com/intel-go/yanff/flow"
+import (
+	"log"
+
+	"github.com/intel-go/yanff/flow"
+)
+
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
 func main() {
 	config := flow.Config{}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	initCommonState()
 
-	firstFlow := flow.SetReceiver(0)
-	flow.SetHandler(firstFlow, modifyPacket[0], nil)
-	flow.SetSender(firstFlow, 0)
+	firstFlow, err := flow.SetReceiver(uint8(0))
+	CheckFatal(err)
+	CheckFatal(flow.SetHandler(firstFlow, modifyPacket[0], nil))
+	CheckFatal(flow.SetSender(firstFlow, uint8(0)))
 
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
